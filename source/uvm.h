@@ -2,8 +2,20 @@
 
 /* **** */
 
-typedef struct vm_tag* vm_ptr;
-typedef vm_ptr const vm_ref;
+#include "config.h"
+
+typedef uvm_cell_st* uvm_cell_sptr;
+typedef uvm_cell_sptr const uvm_cell_spref;
+typedef uvm_cell_st const uvm_cell_stref;
+
+typedef uvm_cell_ut* uvm_cell_uptr;
+typedef uvm_cell_uptr const uvm_cell_upref;
+typedef uvm_cell_ut const uvm_cell_utref;
+
+typedef struct uvm_tag* uvm_ptr;
+typedef uvm_ptr const uvm_ref;
+
+
 
 #include <stdint.h>
 
@@ -35,65 +47,6 @@ enum {
 	_spr64_rcount_,
 };
 
-typedef enum opcode_class_enum {
-	_alu, _alu_s, _alu_ea,
-	_get_rm, _get_rn, _get_rs,
-	_ldst,
-	_misc,
-	_skip_cc,
-	_sop,
-	_wb_rd, _wb_sop,
-//
-	__OPCODE_CLASS_COUNT,
-}opcode_class_t;
-
-typedef enum opcode_condition_enum {
-	_cc_eq, _cc_ne,
-	_cc_cs, _cc_cc,
-	_cc_mi, _cc_pl,
-	_cc_vs, _cc_vc,
-	_cc_hi, _cc_ls,
-	_cc_ge, _cc_lt,
-	_cc_gt, _cc_le,
-	_cc_al, _cc_nv,
-//
-	_cc_eq_ne = _cc_eq,
-	_cc_cs_cc = _cc_cs,
-	_cc_mi_pl = _cc_mi,
-	_cc_vs_vc = _cc_vs,
-	_cc_hi_ls = _cc_ls,
-	_cc_ge_lt = _cc_ge,
-	_cc_gt_le = _cc_gt,
-	_cc_al_nv = _cc_al,
-}opcode_condition_t;
-
-typedef enum opcode_alu_enum {
-	_alu_and, _alu_eor,	_alu_sub, _alu_rsb,
-	_alu_add, _alu_adc,	_alu_sbc, _alu_rsc,
-	_alu_tst, _alu_teq,	_alu_cmp, _alu_cmn,
-	_alu_orr, _alu_mov, _alu_bic, _alu_mvn,
-//
-	_alu_clz, _alu_div, _alu_mod, _alu_mul,
-}opcode_alu_t;
-
-typedef enum opcode_ldst_enum {
-	_ldb, _ldsb, _stb,
-	_ldh, _ldsh, _sth,
-	_ldr, _ldsr, _str,
-}opcode_ldst_t;
-
-typedef enum opcode_misc_enum {
-	_misc_break, _misc_exit,
-	_misc_get_rm_i16, _misc_get_rm_i32, _misc_get_rm_i8,
-	_misc_get_rm_u8,
-	_misc_get_rs_i8,
-}opcode_misc_t;
-
-typedef enum opcode_sop_enum {
-	_sop_lsl, _sop_lsr, _sop_asr, _sop_ror, _sop_rrx,
-	_alu_lsl = 8, _alu_lsr, _alu_asr, _alu_ror, _alu_rrx,
-}opcode_sop_t;
-
 typedef union uvm_pc_tag {
 	void *p;
 	int16_t* p2i16;
@@ -104,12 +57,12 @@ typedef union uvm_pc_tag {
 	uint8_t* p2u8;
 }uvm_pc_t;
 
-typedef struct vm_tag {
-	unsigned long gpr[16];
+typedef struct uvm_tag {
+	uvm_cell_ut gpr[16];
 #define GPRx(_x) vm->gpr[_x & 15]
 #define rGPR(_x) GPRx(r##_x)
 //
-	unsigned long spr[_spr_rcount_];
+	uvm_cell_ut spr[_spr_rcount_];
 #define SPRx(_x) vm->spr[_x]
 #define rSPR(_x) SPRx(_spr_##_x)
 //
@@ -122,10 +75,17 @@ typedef struct vm_tag {
 #define rSPR64(_x) SPR64x(_spr64_##_x)
 //
 	struct {
-		unsigned cf:1;
-		unsigned nf:1;
-		unsigned vf:1;
-		unsigned zf:1;
+		struct {
+			char c:1;
+			char n:1;
+			char v:1;
+			char z:1;
+		}apsr;
+//
+		char abort:1;
+		char fiq:1;
+		char irq:1;
+		char wfi:1;
 	}cpsr;
 
 	struct {
@@ -134,8 +94,9 @@ typedef struct vm_tag {
 	}mem;
 	
 	uint8_t ucode[256][16];
-}vm_t;
+}uvm_t;
 
+#define APSR(_flag) vm->cpsr.apsr._flag
 #define CYCLE rSPR64(cycle)
 #define ICOUNT rSPR64(icount)
 #define IP rSPR(ip)
